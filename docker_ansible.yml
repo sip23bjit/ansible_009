@@ -5,20 +5,38 @@
 
   tasks:
     - name: Update server OS packages
-      command: dnf update
+      command: dnf update -y
 
-    - name: Add Docker CE repository
-      command: dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+    - name: Add signing key
+      rpm_key:
+        key: "https://download.docker.com/linux/rhel/gpg"
+        state: present
 
-    - name: Remove old Docker packages
-      command: dnf remove docker docker-common docker-selinux docker-engine
+    - name: Add repository into repo.d list
+      yum_repository:
+        name: docker
+        description: docker repository
+        baseurl: "https://download.docker.com/linux/centos/9/x86_64/stable"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "https://download.docker.com/linux/rhel/gpg"
 
-    - name: Install Docker CE, Docker CLI, Containerd, and Docker Compose
-      dnf:
+    - name: Install Docker
+      yum:
         name:
           - docker-ce
           - docker-ce-cli
-          - containerd.io
-          - docker-compose-plugin
-        state: present
-        allow_erasing: yes
+        state: latest
+        update_cache: true
+
+    - name: Start Docker
+      service:
+        name: "docker"
+        enabled: true
+        state: started
+
+    - name: Add Jenkins to Docker group
+      user:
+        name: "jenkins"
+        groups: docker
+        append: yes
